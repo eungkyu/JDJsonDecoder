@@ -183,7 +183,9 @@ static NSMutableDictionary *classHandlerMap;
     if ([cls isSubclassOfClass:[NSNumber class]])
         return [self numberForClass:cls withValue:value];
 
-    if (cls == nil)
+    if (cls != nil)
+        return [self objectForClass:cls withValue:value];
+    else
         return [self objectForAttribute:attribute fromValue:value];
     
     return nil;
