@@ -103,7 +103,7 @@ static NSMutableDictionary *globalHandlerClsMap;
         if (value == [NSNull null])
             return nil;
         
-        NSLog(@"not a dictionary, use empty object");
+        JDJsonDecoderWarning(@"expect NSDictionary subclass but %@, use empty object", NSStringFromClass([value class]));
         return [[cls alloc] init];
     }
     
@@ -117,7 +117,7 @@ static NSMutableDictionary *globalHandlerClsMap;
     
         objc_property_t property = class_getProperty(cls, [key cStringUsingEncoding:NSUTF8StringEncoding]);
         if (property == NULL) {
-            NSLog(@"%@: no property, ignoring", key);
+            JDJsonDecoderWarning(@"no property for %@, ignoring", key);
 #ifdef DEBUG
             [self.keyPath removeLastObject];
 #endif
@@ -136,7 +136,7 @@ static NSMutableDictionary *globalHandlerClsMap;
             [object setValue:member forKey:key];
         }
         @catch (NSException *exception) {
-            JDJsonDecoderWarning(@"no property setter, ignoring");
+            JDJsonDecoderWarning(@"no property setter for %@, ignoring", key);
         }
 #ifdef DEBUG
         [self.keyPath removeLastObject];
