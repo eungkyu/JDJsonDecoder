@@ -10,6 +10,22 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 
+#ifdef DEBUG
+#define JDJsonDecoderWarning(format, ...) \
+    NSLog(@"%@: " format, [self.keyPath componentsJoinedByString:@"."], ##__VA_ARGS__)
+#else
+#define JDJsonDecoderWarning(format, ...) \
+    NSLog(format, ##__VA_ARGS__)
+#endif
+
+@interface JDJsonDecoder ()
+
+#ifdef DEBUG
+@property (strong, nonatomic) NSMutableArray *keyPath;
+#endif
+
+@end
+
 @implementation JDJsonDecoder
 
 + (id)objectForClass:(Class)cls withData:(NSData *)data options:(NSJSONReadingOptions)opt error:(NSError **)error
@@ -63,11 +79,17 @@ static NSMutableDictionary *classHandlerMap;
     id object = [[cls alloc] init];
     NSDictionary *dic = value;
     for (NSString *key in dic) {
+#ifdef DEBUG
+        [self.keyPath addObject:key];
+#endif
         id val = dic[key];
     
         objc_property_t property = class_getProperty(cls, [key cStringUsingEncoding:NSUTF8StringEncoding]);
         if (property == NULL) {
             NSLog(@"%@: no property, ignoring", key);
+#ifdef DEBUG
+            [self.keyPath removeLastObject];
+#endif
             continue;
         }
         const char *attribute = property_getAttributes(property);
@@ -83,8 +105,11 @@ static NSMutableDictionary *classHandlerMap;
             [object setValue:member forKey:key];
         }
         @catch (NSException *exception) {
-            NSLog(@"%@: no property setter, ignoring", key);
+            JDJsonDecoderWarning(@"no property setter, ignoring");
         }
+#ifdef DEBUG
+        [self.keyPath removeLastObject];
+#endif
     }
     return object;
 }
@@ -170,12 +195,12 @@ static NSMutableDictionary *classHandlerMap;
         if (value == [NSNull null])
             return nil;
         
-        NSLog(@"not an array, use empty one");
+        JDJsonDecoderWarning(@"expect NSArray subclass but %@, use empty one", NSStringFromClass([value class]));
         return [[cls alloc] init];
     }
     
     if (memberAttributeList.count == 0) {
-        NSLog(@"member type of an array not specified, use empty one");
+        JDJsonDecoderWarning(@"member type of an array not specified, use empty one");
         return [[cls alloc] init];
     }
     
@@ -202,12 +227,12 @@ static NSMutableDictionary *classHandlerMap;
         if (value == [NSNull null])
             return nil;
         
-        NSLog(@"not a dictionary, use empty one");
+        JDJsonDecoderWarning(@"expect NSDictionary subclass but %@, use empty one", NSStringFromClass([value class]));
         return [[cls alloc] init];
     }
     
     if (memberAttributeList.count == 0) {
-        NSLog(@"member type of a dictionary not specified, use empty one");
+        JDJsonDecoderWarning(@"member type of a dictionary not specified, use empty one");
         return [[cls alloc] init];
     }
     
@@ -218,12 +243,18 @@ static NSMutableDictionary *classHandlerMap;
     NSDictionary *dictionary = value;
     NSMutableDictionary *object = [NSMutableDictionary dictionaryWithCapacity:dictionary.count];
     for (NSString *key in dictionary) {
+#ifdef DEBUG
+        [self.keyPath addObject:key];
+#endif
         id val = dictionary[key];
         id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList fromValue:val];
         if (member == nil)
             [object setObject:[NSNull null] forKey:key];
         else
             [object setObject:member forKey:key];
+#ifdef DEBUG
+        [self.keyPath removeLastObject];
+#endif
     }
     
     return object;
@@ -235,7 +266,7 @@ static NSMutableDictionary *classHandlerMap;
         if (value == [NSNull null])
             return nil;
         
-        NSLog(@"not a string, use empty one");
+        JDJsonDecoderWarning(@"expect NSString subclass but %@, use empty one", NSStringFromClass([value class]));
         return [[cls alloc] init];
     }
 
@@ -248,7 +279,7 @@ static NSMutableDictionary *classHandlerMap;
         if (value == [NSNull null])
             return nil;
         
-        NSLog(@"not a number, use 0");
+        JDJsonDecoderWarning(@"expect NSNumber subclass but %@, use @0", NSStringFromClass([value class]));
         return @0;
     }
     
@@ -261,7 +292,7 @@ static NSMutableDictionary *classHandlerMap;
         if (value == [NSNull null])
             return nil;
         
-        NSLog(@"not a number, use 0");
+        JDJsonDecoderWarning(@"expect NSNumber subclass but %@, use @0", NSStringFromClass([value class]));
         return @0;
     }
     
@@ -272,5 +303,15 @@ static NSMutableDictionary *classHandlerMap;
 
     return value;
 }
+
+#ifdef DEBUG
+- (NSMutableArray *)keyPath
+{
+    if (_keyPath == nil)
+        _keyPath = [[NSMutableArray alloc] init];
+    
+    return _keyPath;
+}
+#endif
 
 @end
