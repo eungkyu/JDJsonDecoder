@@ -16,7 +16,7 @@ typedef NS_ENUM(int, JDJsonDecoderError) {
 
 @protocol JDJsonDecoding <NSObject>
 
-- (id)objectWithValue:(id)value;
+- (id)objectForClass:(Class)cls withValue:(id)value;
 
 @end
 
@@ -25,5 +25,10 @@ typedef NS_ENUM(int, JDJsonDecoderError) {
 + (id)objectForClass:(Class)cls withData:(NSData *)data options:(NSJSONReadingOptions)opt error:(NSError **)error;
 + (id)objectForClass:(Class)cls withStream:(NSInputStream *)stream options:(NSJSONReadingOptions)opt error:(NSError **)error;
 + (id)objectForClass:(Class)cls withJSONObject:(id)jsonObject error:(NSError **)error;
++ (void)registerGlobalHandlerClass:(Class)handlerCls forClass:(Class)cls;
+
+- (id)init;
+- (id)parseForClass:(Class)cls withJSONObject:(id)jsonObject error:(NSError **)error;
+- (void)registerHandler:(id<JDJsonDecoding>)handler forClass:(Class)cls;
 
 @end

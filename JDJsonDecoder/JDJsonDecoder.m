@@ -20,6 +20,7 @@
 
 @interface JDJsonDecoder ()
 
+@property (strong, nonatomic) NSMutableDictionary *classHandlerMap;
 #ifdef DEBUG
 @property (strong, nonatomic) NSMutableArray *keyPath;
 #endif
@@ -48,22 +49,52 @@
 
 + (id)objectForClass:(Class)cls withJSONObject:(id)jsonObject error:(NSError **)error
 {
+    JDJsonDecoder *decoder = [[self alloc] init];
+    return [decoder parseForClass:cls withJSONObject:jsonObject error:error];
+}
+
+static NSMutableDictionary *globalHandlerClsMap;
+
++ (void)registerGlobalHandlerClass:(Class)handlerCls forClass:(Class)cls
+{
+    if (![handlerCls conformsToProtocol:@protocol(JDJsonDecoding)])
+        [NSException raise:NSInternalInconsistencyException format:@"%@ does not confirm %@ protocol", NSStringFromClass(handlerCls), NSStringFromProtocol(@protocol(JDJsonDecoding))];
+    
+    if (globalHandlerClsMap == nil)
+        globalHandlerClsMap = [NSMutableDictionary dictionaryWithCapacity:1];
+    
+    [globalHandlerClsMap setObject:handlerCls forKey:[NSValue valueWithNonretainedObject:cls]];
+}
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        for (NSValue *key in globalHandlerClsMap) {
+            Class handlerCls = globalHandlerClsMap[key];
+            [self registerHandler:[[handlerCls alloc] init] forClass:[key nonretainedObjectValue]];
+        }
+    }
+    
+    return self;
+}
+
+- (void)registerHandler:(id<JDJsonDecoding>)handler forClass:(Class)cls
+{
+    if (self.classHandlerMap == nil)
+        self.classHandlerMap = [NSMutableDictionary dictionaryWithCapacity:1];
+    
+    [self.classHandlerMap setObject:handler forKey:[NSValue valueWithNonretainedObject:cls]];
+}
+
+- (id)parseForClass:(Class)cls withJSONObject:(id)jsonObject error:(NSError **)error
+{
     if (![jsonObject isKindOfClass:[NSDictionary class]]) {
         *error = [NSError errorWithDomain:JDJsonDecoderErrorDomain code:JDJsonDecoderErrorNotDictionary userInfo:@{NSLocalizedDescriptionKey : @"Top level of JSONObject must be a dictionary"}];
         return nil;
     }
     
-    return [[[self alloc] init] objectForClass:cls withValue:jsonObject];
-}
-
-static NSMutableDictionary *classHandlerMap;
-
-+ (void)registerHandler:(id<JDJsonDecoding>)classHandler forClass:(Class)cls
-{
-    if (classHandlerMap == nil)
-        classHandlerMap = [NSMutableDictionary dictionaryWithCapacity:1];
-    
-    [classHandlerMap setObject:classHandler forKey:[NSValue valueWithNonretainedObject:cls]];
+    return [self objectForClass:cls withValue:jsonObject];
 }
 
 - (id)objectForClass:(Class)cls withValue:(id)value
@@ -170,11 +201,10 @@ static NSMutableDictionary *classHandlerMap;
     if ([cls isSubclassOfClass:[NSDictionary class]])
         return [self dictionaryForClass:cls ofMemberAttributeList:memberAttributeList withValue:value];
     
-    if (classHandlerMap != nil) {
-        for (NSValue *key in classHandlerMap) {
-            if (cls == [key nonretainedObjectValue])
-                return [classHandlerMap[key] objectWithValue:value];
-        }
+    if (self.classHandlerMap != nil) {
+        id<JDJsonDecoding> handler = self.classHandlerMap[[NSValue valueWithNonretainedObject:cls]];
+        if (handler)
+            return [handler objectForClass:cls withValue:value];
     }
     
     if ([cls isSubclassOfClass:[NSString class]])
