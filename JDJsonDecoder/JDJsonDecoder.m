@@ -150,10 +150,7 @@ static NSMutableDictionary *globalHandlerClsMap;
         id member = [self objectForAttribute:attribute andClass:propertyCls forMemberAttributeList:memberAttributeList fromValue:val];
         
         @try {
-            if (member)
-                [object setValue:member forKey:key];
-            else
-                [object setNilValueForKey:key];
+            [object setValue:member forKey:key];
         }
         @catch (NSException *exception) {
             JDJsonDecoderWarning(@"no property setter for %@, ignoring", key);
@@ -236,7 +233,7 @@ static NSMutableDictionary *globalHandlerClsMap;
     if (cls != nil)
         return [self objectForClass:cls withValue:value];
     else
-        return [self objectForAttribute:attribute fromValue:value];
+        return [self objectForPrimitiveType:attribute fromValue:value];
     
     return nil;
 }
@@ -338,11 +335,11 @@ static NSMutableDictionary *globalHandlerClsMap;
     return value;
 }
 
-- (id)objectForAttribute:(const char *)attribute fromValue:(id)value
+- (id)objectForPrimitiveType:(const char *)attribute fromValue:(id)value
 {
     if (![[value class] isSubclassOfClass:[NSNumber class]]) {
         if (value == [NSNull null])
-            return nil;
+            return @0;
         
         JDJsonDecoderWarning(@"expect NSNumber subclass but %@, use @0", NSStringFromClass([value class]));
         return @0;
@@ -351,7 +348,7 @@ static NSMutableDictionary *globalHandlerClsMap;
     const char *start = attribute + 1;
     size_t len = strcspn(start, ",");
     if (len == 0)
-        return nil;
+        return @0;
 
     return value;
 }
