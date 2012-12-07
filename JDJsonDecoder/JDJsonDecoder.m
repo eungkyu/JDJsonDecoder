@@ -150,7 +150,10 @@ static NSMutableDictionary *globalHandlerClsMap;
         id member = [self objectForAttribute:attribute andClass:propertyCls forMemberAttributeList:memberAttributeList fromValue:val];
         
         @try {
-            [object setValue:member forKey:key];
+            if (member)
+                [object setValue:member forKey:key];
+            else
+                [object setNilValueForKey:key];
         }
         @catch (NSException *exception) {
             JDJsonDecoderWarning(@"no property setter for %@, ignoring", key);
