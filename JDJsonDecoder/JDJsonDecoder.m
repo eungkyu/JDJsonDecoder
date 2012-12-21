@@ -147,7 +147,7 @@ static NSMutableDictionary *globalHandlerClsMap;
             memberAttributeList = [self memberAttributeListIn:cls forProperty:property named:key];
         }
         
-        id member = [self objectForAttribute:attribute andClass:propertyCls forMemberAttributeList:memberAttributeList fromValue:val];
+        id member = [self objectForAttribute:attribute andClass:propertyCls forMemberAttributeList:memberAttributeList withValue:val];
         
         @try {
             [object setValue:member forKey:key];
@@ -211,8 +211,11 @@ static NSMutableDictionary *globalHandlerClsMap;
     return cls;
 }
 
-- (id)objectForAttribute:(const char *)attribute andClass:(Class)cls forMemberAttributeList:(NSMutableArray *)memberAttributeList fromValue:(id)value
+- (id)objectForAttribute:(const char *)attribute andClass:(Class)cls forMemberAttributeList:(NSMutableArray *)memberAttributeList withValue:(id)value
 {
+    if (!cls)
+        return [self objectForPrimitiveType:attribute withValue:value];
+
     if ([cls isSubclassOfClass:[NSArray class]])
         return [self arrayForClass:cls ofMemberAttributeList:memberAttributeList withValue:value];
     
@@ -231,12 +234,7 @@ static NSMutableDictionary *globalHandlerClsMap;
     if ([cls isSubclassOfClass:[NSNumber class]])
         return [self numberForClass:cls withValue:value];
 
-    if (cls != nil)
-        return [self objectForClass:cls withValue:value];
-    else
-        return [self objectForPrimitiveType:attribute fromValue:value];
-    
-    return nil;
+    return [self objectForClass:cls withValue:value];
 }
 
 - (id)arrayForClass:(Class)cls ofMemberAttributeList:(NSMutableArray *)memberAttributeList withValue:(id)value
@@ -261,7 +259,7 @@ static NSMutableDictionary *globalHandlerClsMap;
     NSArray *array = value;
     NSMutableArray *object = [NSMutableArray arrayWithCapacity:array.count];
     for (id val in array) {
-        id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList fromValue:val];
+        id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList withValue:val];
         if (member == nil)
             [object addObject:[NSNull null]];
         else
@@ -297,7 +295,7 @@ static NSMutableDictionary *globalHandlerClsMap;
         [self.keyPath addObject:key];
 #endif
         id val = dictionary[key];
-        id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList fromValue:val];
+        id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList withValue:val];
         if (member == nil)
             [object setObject:[NSNull null] forKey:key];
         else
@@ -336,7 +334,7 @@ static NSMutableDictionary *globalHandlerClsMap;
     return value;
 }
 
-- (id)objectForPrimitiveType:(const char *)attribute fromValue:(id)value
+- (id)objectForPrimitiveType:(const char *)attribute withValue:(id)value
 {
     if (![[value class] isSubclassOfClass:[NSNumber class]]) {
         if (value == [NSNull null])
