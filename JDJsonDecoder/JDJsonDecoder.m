@@ -203,11 +203,12 @@ static NSMutableDictionary *globalHandlerClsMap;
     
     strncpy(ptr, start, len);
     ptr[len] = '\0';
-    
+
+    Class cls = objc_getClass(ptr);
+
     if (len >= 32)
         free(ptr);
-    
-    return objc_getClass(ptr);
+    return cls;
 }
 
 - (id)objectForAttribute:(const char *)attribute andClass:(Class)cls forMemberAttributeList:(NSMutableArray *)memberAttributeList fromValue:(id)value
