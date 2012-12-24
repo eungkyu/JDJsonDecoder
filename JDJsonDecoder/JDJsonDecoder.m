@@ -265,7 +265,10 @@ static NSMutableDictionary *globalHandlerClsMap;
         else
             [object addObject:member];
     }
-    
+
+    if ([[NSMutableArray class] isSubclassOfClass:cls])
+        return object;
+
     return [[cls alloc] initWithArray:object copyItems:NO];
 }
 
@@ -305,7 +308,10 @@ static NSMutableDictionary *globalHandlerClsMap;
 #endif
     }
     
-    return object;
+    if ([[NSMutableDictionary class] isSubclassOfClass:cls])
+        return object;
+
+    return [[cls alloc] initWithDictionary:object copyItems:NO];
 }
 
 - (NSString *)stringForClass:(Class)cls withValue:(id)value
