@@ -324,6 +324,9 @@ static NSMutableDictionary *globalHandlerClsMap;
         return [[cls alloc] init];
     }
 
+    if ([[value class] isSubclassOfClass:cls])
+        return value;
+
     return [[cls alloc] initWithString:value];
 }
 
