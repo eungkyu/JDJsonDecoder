@@ -142,12 +142,13 @@ static NSMutableDictionary *globalHandlerClsMap;
         }
         const char *attribute = property_getAttributes(property);
         Class propertyCls = [self classFromPropertyAttribute:attribute];
-        NSMutableArray *memberAttributeList = nil;
+        NSArray *memberAttributeList = nil;
+        NSUInteger index = 0;
         if ([propertyCls isSubclassOfClass:[NSArray class]] || [propertyCls isSubclassOfClass:[NSDictionary class]]) {
             memberAttributeList = [self memberAttributeListIn:cls forProperty:property named:key];
         }
         
-        id member = [self objectForAttribute:attribute andClass:propertyCls forMemberAttributeList:memberAttributeList withValue:val];
+        id member = [self objectForAttribute:attribute andClass:propertyCls forMemberAttributeList:memberAttributeList andIndex:index withValue:val];
         
         @try {
             [object setValue:member forKey:key];
@@ -211,16 +212,16 @@ static NSMutableDictionary *globalHandlerClsMap;
     return cls;
 }
 
-- (id)objectForAttribute:(const char *)attribute andClass:(Class)cls forMemberAttributeList:(NSMutableArray *)memberAttributeList withValue:(id)value
+- (id)objectForAttribute:(const char *)attribute andClass:(Class)cls forMemberAttributeList:(NSArray *)memberAttributeList andIndex:(NSUInteger)index withValue:(id)value
 {
     if (!cls)
         return [self objectForPrimitiveType:attribute withValue:value];
 
     if ([cls isSubclassOfClass:[NSArray class]])
-        return [self arrayForClass:cls ofMemberAttributeList:memberAttributeList withValue:value];
+        return [self arrayForClass:cls ofMemberAttributeList:memberAttributeList andIndex:index withValue:value];
     
     if ([cls isSubclassOfClass:[NSDictionary class]])
-        return [self dictionaryForClass:cls ofMemberAttributeList:memberAttributeList withValue:value];
+        return [self dictionaryForClass:cls ofMemberAttributeList:memberAttributeList andIndex:index withValue:value];
     
     if (self.classHandlerMap != nil) {
         id<JDJsonDecoding> handler = self.classHandlerMap[[NSValue valueWithNonretainedObject:cls]];
@@ -237,7 +238,7 @@ static NSMutableDictionary *globalHandlerClsMap;
     return [self objectForClass:cls withValue:value];
 }
 
-- (id)arrayForClass:(Class)cls ofMemberAttributeList:(NSMutableArray *)memberAttributeList withValue:(id)value
+- (id)arrayForClass:(Class)cls ofMemberAttributeList:(NSArray *)memberAttributeList andIndex:(NSUInteger)index withValue:(id)value
 {
     if (![[value class] isSubclassOfClass:[NSArray class]]) {
         if (value == [NSNull null])
@@ -247,19 +248,18 @@ static NSMutableDictionary *globalHandlerClsMap;
         return [[cls alloc] init];
     }
     
-    if (memberAttributeList.count == 0) {
+    if (memberAttributeList.count <= index) {
         JDJsonDecoderWarning(@"member type of an array not specified, use empty one");
         return [[cls alloc] init];
     }
     
-    const char *memberAttribute = [memberAttributeList[0] pointerValue];
-    [memberAttributeList removeObjectAtIndex:0];
+    const char *memberAttribute = [memberAttributeList[index] pointerValue];
     Class memberCls = [self classFromPropertyAttribute:memberAttribute];
     
     NSArray *array = value;
     NSMutableArray *object = [NSMutableArray arrayWithCapacity:array.count];
     for (id val in array) {
-        id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList withValue:val];
+        id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList andIndex:index + 1 withValue:val];
         if (member == nil)
             [object addObject:[NSNull null]];
         else
@@ -272,7 +272,7 @@ static NSMutableDictionary *globalHandlerClsMap;
     return [[cls alloc] initWithArray:object copyItems:NO];
 }
 
-- (NSDictionary *)dictionaryForClass:(Class)cls ofMemberAttributeList:(NSMutableArray *)memberAttributeList withValue:(id)value
+- (NSDictionary *)dictionaryForClass:(Class)cls ofMemberAttributeList:(NSArray *)memberAttributeList andIndex:(NSUInteger)index withValue:(id)value
 {
     if (![[value class] isSubclassOfClass:[NSDictionary class]]) {
         if (value == [NSNull null])
@@ -282,13 +282,12 @@ static NSMutableDictionary *globalHandlerClsMap;
         return [[cls alloc] init];
     }
     
-    if (memberAttributeList.count == 0) {
+    if (memberAttributeList.count <= index) {
         JDJsonDecoderWarning(@"member type of a dictionary not specified, use empty one");
         return [[cls alloc] init];
     }
     
-    const char *memberAttribute = [memberAttributeList[0] pointerValue];
-    [memberAttributeList removeObjectAtIndex:0];
+    const char *memberAttribute = [memberAttributeList[index] pointerValue];
     Class memberCls = [self classFromPropertyAttribute:memberAttribute];
     
     NSDictionary *dictionary = value;
@@ -298,7 +297,7 @@ static NSMutableDictionary *globalHandlerClsMap;
         [self.keyPath addObject:key];
 #endif
         id val = dictionary[key];
-        id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList withValue:val];
+        id member = [self objectForAttribute:memberAttribute andClass:memberCls forMemberAttributeList:memberAttributeList andIndex:index + 1 withValue:val];
         if (member == nil)
             [object setObject:[NSNull null] forKey:key];
         else
