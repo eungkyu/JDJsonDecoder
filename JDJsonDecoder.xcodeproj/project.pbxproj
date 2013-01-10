@@ -16,6 +16,10 @@
 		2402C934166D9E8B00F0EEDE /* libJDJsonDecoder.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2402C91B166D9E8B00F0EEDE /* libJDJsonDecoder.a */; };
 		2402C93A166D9E8B00F0EEDE /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2402C938166D9E8B00F0EEDE /* InfoPlist.strings */; };
 		2402C93D166D9E8B00F0EEDE /* JDJsonDecoderTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2402C93C166D9E8B00F0EEDE /* JDJsonDecoderTests.m */; };
+		24DBC7B8169E5B86000F50CB /* TestClass.m in Sources */ = {isa = PBXBuildFile; fileRef = 24DBC7B7169E5B86000F50CB /* TestClass.m */; };
+		24DBC7BC169E5C20000F50CB /* TestInnerClass.m in Sources */ = {isa = PBXBuildFile; fileRef = 24DBC7BB169E5C20000F50CB /* TestInnerClass.m */; };
+		24DBC7BF169E6050000F50CB /* TestURLDecoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 24DBC7BE169E6050000F50CB /* TestURLDecoder.m */; };
+		24DBC7C2169E83E2000F50CB /* TestMutableClass.m in Sources */ = {isa = PBXBuildFile; fileRef = 24DBC7C1169E83E2000F50CB /* TestMutableClass.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,6 +58,14 @@
 		2402C939166D9E8B00F0EEDE /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		2402C93B166D9E8B00F0EEDE /* JDJsonDecoderTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JDJsonDecoderTests.h; sourceTree = "<group>"; };
 		2402C93C166D9E8B00F0EEDE /* JDJsonDecoderTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JDJsonDecoderTests.m; sourceTree = "<group>"; };
+		24DBC7B6169E5B86000F50CB /* TestClass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestClass.h; sourceTree = "<group>"; };
+		24DBC7B7169E5B86000F50CB /* TestClass.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestClass.m; sourceTree = "<group>"; };
+		24DBC7BA169E5C20000F50CB /* TestInnerClass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestInnerClass.h; sourceTree = "<group>"; };
+		24DBC7BB169E5C20000F50CB /* TestInnerClass.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestInnerClass.m; sourceTree = "<group>"; };
+		24DBC7BD169E6050000F50CB /* TestURLDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestURLDecoder.h; sourceTree = "<group>"; };
+		24DBC7BE169E6050000F50CB /* TestURLDecoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestURLDecoder.m; sourceTree = "<group>"; };
+		24DBC7C0169E83E1000F50CB /* TestMutableClass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestMutableClass.h; sourceTree = "<group>"; };
+		24DBC7C1169E83E2000F50CB /* TestMutableClass.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestMutableClass.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +143,14 @@
 			children = (
 				2402C93B166D9E8B00F0EEDE /* JDJsonDecoderTests.h */,
 				2402C93C166D9E8B00F0EEDE /* JDJsonDecoderTests.m */,
+				24DBC7B6169E5B86000F50CB /* TestClass.h */,
+				24DBC7B7169E5B86000F50CB /* TestClass.m */,
+				24DBC7C0169E83E1000F50CB /* TestMutableClass.h */,
+				24DBC7C1169E83E2000F50CB /* TestMutableClass.m */,
+				24DBC7BA169E5C20000F50CB /* TestInnerClass.h */,
+				24DBC7BB169E5C20000F50CB /* TestInnerClass.m */,
+				24DBC7BD169E6050000F50CB /* TestURLDecoder.h */,
+				24DBC7BE169E6050000F50CB /* TestURLDecoder.m */,
 				2402C936166D9E8B00F0EEDE /* Supporting Files */,
 			);
 			path = JDJsonDecoderTests;
@@ -252,6 +272,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				2402C93D166D9E8B00F0EEDE /* JDJsonDecoderTests.m in Sources */,
+				24DBC7B8169E5B86000F50CB /* TestClass.m in Sources */,
+				24DBC7BC169E5C20000F50CB /* TestInnerClass.m in Sources */,
+				24DBC7BF169E6050000F50CB /* TestURLDecoder.m in Sources */,
+				24DBC7C2169E83E2000F50CB /* TestMutableClass.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -397,6 +421,7 @@
 				2402C942166D9E8B00F0EEDE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		2402C943166D9E8B00F0EEDE /* Build configuration list for PBXNativeTarget "JDJsonDecoderTests" */ = {
 			isa = XCConfigurationList;
@@ -405,6 +430,7 @@
 				2402C945166D9E8B00F0EEDE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
