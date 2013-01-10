@@ -266,7 +266,7 @@ static NSMutableDictionary *globalHandlerClsMap;
             [object addObject:member];
     }
 
-    if ([[NSMutableArray class] isSubclassOfClass:cls])
+    if (cls == [NSArray class] || cls == [NSMutableArray class])
         return object;
 
     return [[cls alloc] initWithArray:object copyItems:NO];
@@ -306,8 +306,8 @@ static NSMutableDictionary *globalHandlerClsMap;
         [self.keyPath removeLastObject];
 #endif
     }
-    
-    if ([[NSMutableDictionary class] isSubclassOfClass:cls])
+
+    if (cls == [NSDictionary class] || cls == [NSMutableDictionary class])
         return object;
 
     return [[cls alloc] initWithDictionary:object copyItems:NO];
@@ -323,7 +323,7 @@ static NSMutableDictionary *globalHandlerClsMap;
         return [[cls alloc] init];
     }
 
-    if ([[value class] isSubclassOfClass:cls])
+    if (cls == [NSString class])
         return value;
 
     return [[cls alloc] initWithString:value];
