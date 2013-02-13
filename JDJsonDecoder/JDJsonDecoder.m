@@ -107,7 +107,8 @@ static NSMutableDictionary *globalHandlerClsMap;
 - (id)parseForClass:(Class)cls withJSONObject:(id)jsonObject error:(NSError **)error
 {
     if (![jsonObject isKindOfClass:[NSDictionary class]]) {
-        *error = [NSError errorWithDomain:JDJsonDecoderErrorDomain code:JDJsonDecoderErrorNotDictionary userInfo:@{NSLocalizedDescriptionKey : @"Top level of JSONObject must be a dictionary"}];
+        if (error)
+            *error = [NSError errorWithDomain:JDJsonDecoderErrorDomain code:JDJsonDecoderErrorNotDictionary userInfo:@{NSLocalizedDescriptionKey : @"Top level of JSONObject must be a dictionary"}];
         return nil;
     }
     
