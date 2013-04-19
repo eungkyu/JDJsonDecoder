@@ -127,21 +127,151 @@ static NSMutableDictionary *globalHandlerClsMap;
 
 - (id)parseForClass:(Class)cls withJSONObject:(id)jsonObject error:(NSError **)error
 {
-    if (![jsonObject isKindOfClass:[NSDictionary class]]) {
+    if (cls == nil || cls == [NSNull class]) {
         if (error)
-            *error = [NSError errorWithDomain:JDJsonDecoderErrorDomain code:JDJsonDecoderErrorNotDictionary userInfo:@{NSLocalizedDescriptionKey : @"Top level of JSONObject must be a dictionary"}];
+            *error = [NSError errorWithDomain:JDJsonDecoderErrorDomain code:JDJsonDecoderErrorNoClass userInfo:@{NSLocalizedDescriptionKey : @"cls is nil or [NSNull class]"}];
         return nil;
     }
     
-    return getObjectForClass(self, cls, jsonObject);
+    return getObjectForClass(self, cls, nil, 0, jsonObject);
 }
 
-static id getObjectForClass(JDJsonDecoder *self, Class cls, id value)
+static id getObjectForClass(JDJsonDecoder *self, Class cls, NSArray *memberClassList, NSUInteger index, id value)
+{
+    if (!cls) {
+        if (value == [NSNull null])
+            return @0;
+        
+        return getNumberForPrimitiveType(self, value);
+    }
+
+    if (value == [NSNull null])
+        return nil;
+    
+    if ([cls isSubclassOfClass:[NSArray class]])
+        return getArrayForClass(self, cls, memberClassList, index, value);
+    
+    if ([cls isSubclassOfClass:[NSDictionary class]])
+        return getDictionaryForClass(self, cls, memberClassList, index, value);
+    
+    if (self.classHandlerMap != nil) {
+        id<JDJsonDecoding> handler = self.classHandlerMap[[NSValue valueWithNonretainedObject:cls]];
+        if (handler)
+            return [handler objectForClass:cls withValue:value];
+    }
+    
+    if ([cls isSubclassOfClass:[NSString class]])
+        return getStringForClass(self, cls, value);
+    
+    if ([cls isSubclassOfClass:[NSNumber class]])
+        return getNumberForClass(self, cls, value);
+
+    return getNativeObjectForClass(self, cls, value);
+}
+
+static NSNumber *getNumberForPrimitiveType(JDJsonDecoder *self, id value)
+{
+    if (![[value class] isSubclassOfClass:[NSNumber class]]) {
+        JDJsonDecoderWarning(@"expect NSNumber subclass but %@, use @0", NSStringFromClass([value class]));
+        return @0;
+    }
+    
+    return value;
+}
+
+static NSArray *getArrayForClass(JDJsonDecoder *self, Class cls, NSArray *memberClassList, NSUInteger index, id value)
+{
+    if (![[value class] isSubclassOfClass:[NSArray class]]) {
+        JDJsonDecoderWarning(@"expect NSArray subclass but %@, use empty one", NSStringFromClass([value class]));
+        return [[cls alloc] init];
+    }
+    
+    if (memberClassList.count <= index) {
+        JDJsonDecoderWarning(@"member type of an array not specified, use empty one");
+        return [[cls alloc] init];
+    }
+    
+    Class memberCls = [memberClassList[index] nonretainedObjectValue];
+    
+    NSArray *array = value;
+    NSMutableArray *object = [NSMutableArray arrayWithCapacity:array.count];
+    for (id val in array) {
+        id member = getObjectForClass(self, memberCls, memberClassList, index + 1, val);
+        if (member == nil)
+            member = [NSNull null];
+        
+        [object addObject:member];
+    }
+
+    if (cls == [NSArray class] || cls == [NSMutableArray class])
+        return object;
+
+    return [[cls alloc] initWithArray:object copyItems:NO];
+}
+
+static NSDictionary *getDictionaryForClass(JDJsonDecoder *self, Class cls, NSArray *memberClassList, NSUInteger index, id value)
+{
+    if (![[value class] isSubclassOfClass:[NSDictionary class]]) {
+        JDJsonDecoderWarning(@"expect NSDictionary subclass but %@, use empty one", NSStringFromClass([value class]));
+        return [[cls alloc] init];
+    }
+    
+    if (memberClassList.count <= index) {
+        JDJsonDecoderWarning(@"member type of a dictionary not specified, use empty one");
+        return [[cls alloc] init];
+    }
+    
+    Class memberCls = [memberClassList[index] nonretainedObjectValue];
+    
+    NSDictionary *dictionary = value;
+    NSMutableDictionary *object = [NSMutableDictionary dictionaryWithCapacity:dictionary.count];
+    for (NSString *key in dictionary) {
+#ifdef JDJSON_DEBUG
+        [self->_keyPath addObject:key];
+#endif
+        id val = dictionary[key];
+        id member = getObjectForClass(self, memberCls, memberClassList, index + 1, val);
+        if (member == nil)
+            member = [NSNull null];
+        
+        [object setObject:member forKey:key];
+#ifdef JDJSON_DEBUG
+        [self->_keyPath removeLastObject];
+#endif
+    }
+
+    if (cls == [NSDictionary class] || cls == [NSMutableDictionary class])
+        return object;
+
+    return [[cls alloc] initWithDictionary:object copyItems:NO];
+}
+
+static NSString *getStringForClass(JDJsonDecoder *self, Class cls, id value)
+{
+    if (![[value class] isSubclassOfClass:[NSString class]]) {
+        JDJsonDecoderWarning(@"expect NSString subclass but %@, use empty one", NSStringFromClass([value class]));
+        return [[cls alloc] init];
+    }
+
+    if (cls == [NSString class])
+        return value;
+
+    return [[cls alloc] initWithString:value];
+}
+
+static NSNumber *getNumberForClass(JDJsonDecoder *self, Class cls, id value)
+{
+    if (![[value class] isSubclassOfClass:[NSNumber class]]) {
+        JDJsonDecoderWarning(@"expect NSNumber subclass but %@, use @0", NSStringFromClass([value class]));
+        return @0;
+    }
+    
+    return value;
+}
+
+static id getNativeObjectForClass(JDJsonDecoder *self, Class cls, id value)
 {
     if (![value isKindOfClass:[NSDictionary class]]) {
-        if (value == [NSNull null])
-            return nil;
-        
         JDJsonDecoderWarning(@"expect NSDictionary subclass but %@, use empty object", NSStringFromClass([value class]));
         return [[cls alloc] init];
     }
@@ -167,7 +297,7 @@ static id getObjectForClass(JDJsonDecoder *self, Class cls, id value)
         Class propertyCls = getClassForAttribute(attribute);
         NSArray *memberClassList = getMemberClassList(self, cls, property, utf8Name);
         
-        id member = getObjectForAttribute(self, propertyCls, memberClassList, 0, memberObject);
+        id member = getObjectForClass(self, propertyCls, memberClassList, 0, memberObject);
         
         @try {
             [object setValue:member forKey:name];
@@ -180,6 +310,35 @@ static id getObjectForClass(JDJsonDecoder *self, Class cls, id value)
 #endif
     }
     return object;
+}
+
+static Class getClassForAttribute(const char *attribute)
+{
+    char buf[32];
+    if (strncmp(attribute, "T@\"", 3) != 0)
+        return nil;
+    
+    const char *start = attribute + 3;
+    size_t len = strcspn(start, "\"");
+    if (len == 0)
+        return nil;
+    
+    char *ptr = buf;
+    if (len >= 32) {
+        ptr = malloc(len + 1);
+        if (!ptr)
+            [NSException raise:NSMallocException format:@"allocing class ptr failed"];
+    }
+    
+    strncpy(ptr, start, len);
+    ptr[len] = '\0';
+    
+    Class cls = objc_getClass(ptr);
+    
+    if (len >= 32)
+        free(ptr);
+    
+    return cls;
 }
 
 static NSArray *getMemberClassList(JDJsonDecoder *self, Class cls, objc_property_t property, const char *name)
@@ -214,179 +373,9 @@ static NSArray *getMemberClassList(JDJsonDecoder *self, Class cls, objc_property
         if (![propertyCls isSubclassOfClass:[NSArray class]] && ![propertyCls isSubclassOfClass:[NSDictionary class]])
             break;
     }
-
+    
     free(propertyName);
     return classList;
-}
-
-static Class getClassForAttribute(const char *attribute)
-{
-    char buf[32];
-    if (strncmp(attribute, "T@\"", 3) != 0)
-        return nil;
-    
-    const char *start = attribute + 3;
-    size_t len = strcspn(start, "\"");
-    if (len == 0)
-        return nil;
-    
-    char *ptr = buf;
-    if (len >= 32) {
-        ptr = malloc(len + 1);
-        if (!ptr)
-            [NSException raise:NSMallocException format:@"allocing class ptr failed"];
-    }
-    
-    strncpy(ptr, start, len);
-    ptr[len] = '\0';
-
-    Class cls = objc_getClass(ptr);
-
-    if (len >= 32)
-        free(ptr);
-    
-    return cls;
-}
-
-static id getObjectForAttribute(JDJsonDecoder *self, Class cls, NSArray *memberClassList, NSUInteger index, id value)
-{
-    if (!cls)
-        return getNumberForPrimitiveType(self, value);
-
-    if ([cls isSubclassOfClass:[NSArray class]])
-        return getArrayForClass(self, cls, memberClassList, index, value);
-    
-    if ([cls isSubclassOfClass:[NSDictionary class]])
-        return getDictionaryForClass(self, cls, memberClassList, index, value);
-    
-    if (self.classHandlerMap != nil) {
-        id<JDJsonDecoding> handler = self.classHandlerMap[[NSValue valueWithNonretainedObject:cls]];
-        if (handler)
-            return [handler objectForClass:cls withValue:value];
-    }
-    
-    if ([cls isSubclassOfClass:[NSString class]])
-        return getStringForClass(self, cls, value);
-    
-    if ([cls isSubclassOfClass:[NSNumber class]])
-        return getNumberForClass(self, cls, value);
-
-    return getObjectForClass(self, cls, value);
-}
-
-static NSArray *getArrayForClass(JDJsonDecoder *self, Class cls, NSArray *memberClassList, NSUInteger index, id value)
-{
-    if (![[value class] isSubclassOfClass:[NSArray class]]) {
-        if (value == [NSNull null])
-            return nil;
-        
-        JDJsonDecoderWarning(@"expect NSArray subclass but %@, use empty one", NSStringFromClass([value class]));
-        return [[cls alloc] init];
-    }
-    
-    if (memberClassList.count <= index) {
-        JDJsonDecoderWarning(@"member type of an array not specified, use empty one");
-        return [[cls alloc] init];
-    }
-    
-    Class memberCls = [memberClassList[index] nonretainedObjectValue];
-    
-    NSArray *array = value;
-    NSMutableArray *object = [NSMutableArray arrayWithCapacity:array.count];
-    for (id val in array) {
-        id member = getObjectForAttribute(self, memberCls, memberClassList, index + 1, val);
-        if (member == nil)
-            [object addObject:[NSNull null]];
-        else
-            [object addObject:member];
-    }
-
-    if (cls == [NSArray class] || cls == [NSMutableArray class])
-        return object;
-
-    return [[cls alloc] initWithArray:object copyItems:NO];
-}
-
-static NSDictionary *getDictionaryForClass(JDJsonDecoder *self, Class cls, NSArray *memberClassList, NSUInteger index, id value)
-{
-    if (![[value class] isSubclassOfClass:[NSDictionary class]]) {
-        if (value == [NSNull null])
-            return nil;
-        
-        JDJsonDecoderWarning(@"expect NSDictionary subclass but %@, use empty one", NSStringFromClass([value class]));
-        return [[cls alloc] init];
-    }
-    
-    if (memberClassList.count <= index) {
-        JDJsonDecoderWarning(@"member type of a dictionary not specified, use empty one");
-        return [[cls alloc] init];
-    }
-    
-    Class memberCls = [memberClassList[index] nonretainedObjectValue];
-    
-    NSDictionary *dictionary = value;
-    NSMutableDictionary *object = [NSMutableDictionary dictionaryWithCapacity:dictionary.count];
-    for (NSString *key in dictionary) {
-#ifdef JDJSON_DEBUG
-        [self->_keyPath addObject:key];
-#endif
-        id val = dictionary[key];
-        id member = getObjectForAttribute(self, memberCls, memberClassList, index + 1, val);
-        if (member == nil)
-            [object setObject:[NSNull null] forKey:key];
-        else
-            [object setObject:member forKey:key];
-#ifdef JDJSON_DEBUG
-        [self->_keyPath removeLastObject];
-#endif
-    }
-
-    if (cls == [NSDictionary class] || cls == [NSMutableDictionary class])
-        return object;
-
-    return [[cls alloc] initWithDictionary:object copyItems:NO];
-}
-
-static NSString *getStringForClass(JDJsonDecoder *self, Class cls, id value)
-{
-    if (![[value class] isSubclassOfClass:[NSString class]]) {
-        if (value == [NSNull null])
-            return nil;
-        
-        JDJsonDecoderWarning(@"expect NSString subclass but %@, use empty one", NSStringFromClass([value class]));
-        return [[cls alloc] init];
-    }
-
-    if (cls == [NSString class])
-        return value;
-
-    return [[cls alloc] initWithString:value];
-}
-
-static NSNumber *getNumberForClass(JDJsonDecoder *self, Class cls, id value)
-{
-    if (![[value class] isSubclassOfClass:[NSNumber class]]) {
-        if (value == [NSNull null])
-            return nil;
-        
-        JDJsonDecoderWarning(@"expect NSNumber subclass but %@, use @0", NSStringFromClass([value class]));
-        return @0;
-    }
-    
-    return value;
-}
-
-static NSNumber *getNumberForPrimitiveType(JDJsonDecoder *self, id value)
-{
-    if (![[value class] isSubclassOfClass:[NSNumber class]]) {
-        if (value == [NSNull null])
-            return @0;
-        
-        JDJsonDecoderWarning(@"expect NSNumber subclass but %@, use @0", NSStringFromClass([value class]));
-        return @0;
-    }
-    
-    return value;
 }
 
 @end

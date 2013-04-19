@@ -28,7 +28,7 @@
 #define JDJsonDecoderErrorDomain @"JDJsonDecoderError"
 
 typedef NS_ENUM(NSUInteger, JDJsonDecoderError) {
-    JDJsonDecoderErrorNotDictionary
+    JDJsonDecoderErrorNoClass
 };
 
 @protocol JDJsonDecoding <NSObject>
