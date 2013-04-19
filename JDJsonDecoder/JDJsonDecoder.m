@@ -57,6 +57,7 @@
     NSMutableDictionary *_memberClassListMap;
 }
 
+@property (assign, nonatomic) JDJsonDecoderOption option;
 @property (strong, nonatomic) NSMutableDictionary *classHandlerMap;
 
 @end
@@ -69,7 +70,7 @@
     if (jsonObject == nil)
         return nil;
     
-    return [self objectForClass:cls withJSONObject:jsonObject error:error];
+    return [self objectForClass:cls withJSONObject:jsonObject option:JDJsonDecoderOptionNone error:error];
 }
 
 + (id)objectForClass:(Class)cls withStream:(NSInputStream *)stream options:(NSJSONReadingOptions)opt error:(NSError **)error
@@ -78,12 +79,12 @@
     if (jsonObject == nil)
         return nil;
     
-    return [self objectForClass:cls withJSONObject:jsonObject error:error];
+    return [self objectForClass:cls withJSONObject:jsonObject option:JDJsonDecoderOptionNone error:error];
 }
 
-+ (id)objectForClass:(Class)cls withJSONObject:(id)jsonObject error:(NSError **)error
++ (id)objectForClass:(Class)cls withJSONObject:(id)jsonObject option:(JDJsonDecoderOption)option error:(NSError **)error
 {
-    JDJsonDecoder *decoder = [[self alloc] init];
+    JDJsonDecoder *decoder = [[self alloc] initWithOption:option];
     return [decoder parseForClass:cls withJSONObject:jsonObject error:error];
 }
 
@@ -102,12 +103,18 @@ static NSMutableDictionary *globalHandlerClsMap;
 
 - (id)init
 {
+    return [self initWithOption:JDJsonDecoderOptionNone];
+}
+
+- (id)initWithOption:(JDJsonDecoderOption)option
+{
     self = [super init];
     if (self) {
 #ifdef JDJSON_DEBUG
         _keyPath = [[NSMutableArray alloc] init];
 #endif
         
+        self.option = option;
         for (NSValue *key in globalHandlerClsMap) {
             Class handlerCls = globalHandlerClsMap[key];
             [self registerHandler:[[handlerCls alloc] init] forClass:[key nonretainedObjectValue]];
@@ -145,8 +152,12 @@ static id getObjectForClass(JDJsonDecoder *self, Class cls, NSArray *memberClass
         return getNumberForPrimitiveType(self, value);
     }
 
-    if (value == [NSNull null])
-        return nil;
+    if (value == [NSNull null]) {
+        if (self.option & JDJsonDecoderOptionPreventNil)
+            return [[cls alloc] init];
+        else
+            return nil;
+    }
     
     if ([cls isSubclassOfClass:[NSArray class]])
         return getArrayForClass(self, cls, memberClassList, index, value);
