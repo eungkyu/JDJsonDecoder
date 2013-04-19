@@ -120,7 +120,7 @@ static NSMutableDictionary *globalHandlerClsMap;
 - (void)registerHandler:(id<JDJsonDecoding>)handler forClass:(Class)cls
 {
     if (self.classHandlerMap == nil)
-        self.classHandlerMap = [NSMutableDictionary dictionaryWithCapacity:1];
+        self.classHandlerMap = [[NSMutableDictionary alloc] initWithCapacity:1];
     
     [self.classHandlerMap setObject:handler forKey:[NSValue valueWithNonretainedObject:cls]];
 }
@@ -194,7 +194,7 @@ static NSArray *getArrayForClass(JDJsonDecoder *self, Class cls, NSArray *member
     Class memberCls = [memberClassList[index] nonretainedObjectValue];
     
     NSArray *array = value;
-    NSMutableArray *object = [NSMutableArray arrayWithCapacity:array.count];
+    NSMutableArray *object = [[NSMutableArray alloc] initWithCapacity:array.count];
     for (id val in array) {
         id member = getObjectForClass(self, memberCls, memberClassList, index + 1, val);
         if (member == nil)
@@ -224,7 +224,7 @@ static NSDictionary *getDictionaryForClass(JDJsonDecoder *self, Class cls, NSArr
     Class memberCls = [memberClassList[index] nonretainedObjectValue];
     
     NSDictionary *dictionary = value;
-    NSMutableDictionary *object = [NSMutableDictionary dictionaryWithCapacity:dictionary.count];
+    NSMutableDictionary *object = [[NSMutableDictionary alloc] initWithCapacity:dictionary.count];
     for (NSString *key in dictionary) {
 #ifdef JDJSON_DEBUG
         [self->_keyPath addObject:key];
@@ -351,7 +351,7 @@ static NSArray *getMemberClassList(JDJsonDecoder *self, Class cls, objc_property
         return nil;
     
     char *propertyName = strdup(name);
-    NSMutableArray *classList = [NSMutableArray array];
+    NSMutableArray *classList = [[NSMutableArray alloc] init];
     
     while (YES) {
         char *memberName;
