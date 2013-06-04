@@ -1,0 +1,18 @@
+{
+    "array": [
+        {
+            "first": { "name": "John", "b": true },
+            "second": { "name": "Jane", "b": false }
+        },
+        {
+            "one": { "name": "Ann", "b": true },
+            "two": { "name": null, "b": false }
+        }
+    ],
+    "i": 10,
+    "n": 100,
+    "url": "http://test.com",
+    "b": 0,
+    "lat": 10.0,
+    "str": "string"
+}

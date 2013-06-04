@@ -29,10 +29,7 @@
 #import "TestMutableClass.h"
 #import "TestURLDecoder.h"
 
-@interface JDJsonDecoderTests () {
-    NSData *testJsonData;
-    NSDictionary *testJsonDic;
-}
+@interface JDJsonDecoderTests ()
 
 @end
 
@@ -43,44 +40,6 @@
     [super setUp];
     
     // Set-up code here.
-    NSString *jsonString = @"{ \
-        \"array\" : [ \
-            { \
-                \"first\" : { \"name\" : \"John\", \"b\" : true }, \
-                \"second\" : { \"name\" : \"Jane\", \"b\" : false } \
-            }, \
-            { \
-                \"one\" : { \"name\" : \"Ann\", \"b\" : true }, \
-                \"two\" : { \"name\" : null, \"b\" : false } \
-            } \
-        ], \
-        \"i\" : 10, \
-        \"n\" : 100, \
-        \"url\" : \"http://test.com\", \
-        \"b\" : 0, \
-        \"lat\" : 10.0, \
-        \"str\" : \"string\" \
-    }";
-    testJsonData = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
-    
-    testJsonDic = @{
-        @"array" : @[
-            @{
-                @"first" : @{ @"name" : @"John", @"b" : @YES },
-                @"second" : @{ @"name" : @"Jane", @"b" : @NO }
-            },
-            @{
-                @"one" : @{ @"name" : @"Ann", @"b" : @YES },
-                @"two" : @{ @"name" : [NSNull null], @"b" : @NO }
-            }
-        ],
-        @"i" : @10,
-        @"n" : @100,
-        @"url" : @"http://test.com",
-        @"b" : @0,
-        @"lat" : @10.0,
-        @"str" : @"string"
-    };
 }
 
 - (void)tearDown
@@ -90,40 +49,56 @@
     [super tearDown];
 }
 
+- (NSInputStream *)inputStreamOfTest
+{
+    NSString *path = [[NSBundle bundleForClass:[self class]] pathForResource:@"test" ofType:@"json"];
+    NSInputStream *inputStream = [NSInputStream inputStreamWithFileAtPath:path];
+    return inputStream;
+}
+
+- (NSData *)dataOfTest
+{
+    NSString *path = [[NSBundle bundleForClass:[self class]] pathForResource:@"test" ofType:@"json"];
+    return [NSData dataWithContentsOfFile:path];
+}
+
 - (void)testJsonObject
 {
+    NSInputStream *jsonStream = [self inputStreamOfTest];
+    [jsonStream open];
+    id jsonObject = [NSJSONSerialization JSONObjectWithStream:jsonStream options:0 error:nil];
     JDJsonDecoder *decoder = [[JDJsonDecoder alloc] init];
     TestURLDecoder *urlDecoder = [[TestURLDecoder alloc] init];
     [decoder registerHandler:urlDecoder forClass:[NSURL class]];
 
-    TestClass *obj = [decoder parseForClass:[TestClass class] withJSONObject:testJsonDic error:nil];
+    TestClass *obj = [decoder parseForClass:[TestClass class] withJSONObject:jsonObject error:nil];
 
     STAssertNotNil(obj, @"not nil");
 
-    STAssertEquals([obj.array[0][@"first"] name], testJsonDic[@"array"][0][@"first"][@"name"], @"array[0] -> dic[first] -> name member");
-    STAssertEquals([obj.array[0][@"first"] b], [testJsonDic[@"array"][0][@"first"][@"b"] boolValue], @"array[0] -> dic[first] -> b member");
+    STAssertEquals([obj.array[0][@"first"] name], jsonObject[@"array"][0][@"first"][@"name"], @"array[0] -> dic[first] -> name member");
+    STAssertEquals([obj.array[0][@"first"] b], [jsonObject[@"array"][0][@"first"][@"b"] boolValue], @"array[0] -> dic[first] -> b member");
 
-    STAssertEquals([obj.array[0][@"second"] name], testJsonDic[@"array"][0][@"second"][@"name"], @"array[0] -> dic[second] -> name member");
-    STAssertEquals([obj.array[0][@"second"] b], [testJsonDic[@"array"][0][@"second"][@"b"] boolValue], @"array[0] -> dic[second] -> b member");
+    STAssertEquals([obj.array[0][@"second"] name], jsonObject[@"array"][0][@"second"][@"name"], @"array[0] -> dic[second] -> name member");
+    STAssertEquals([obj.array[0][@"second"] b], [jsonObject[@"array"][0][@"second"][@"b"] boolValue], @"array[0] -> dic[second] -> b member");
 
-    STAssertEquals([obj.array[1][@"one"] name], testJsonDic[@"array"][1][@"one"][@"name"], @"array[1] -> dic[one] -> name member");
-    STAssertEquals([obj.array[1][@"one"] b], [testJsonDic[@"array"][1][@"one"][@"b"] boolValue], @"array[1] -> dic[one] -> b member");
+    STAssertEquals([obj.array[1][@"one"] name], jsonObject[@"array"][1][@"one"][@"name"], @"array[1] -> dic[one] -> name member");
+    STAssertEquals([obj.array[1][@"one"] b], [jsonObject[@"array"][1][@"one"][@"b"] boolValue], @"array[1] -> dic[one] -> b member");
 
     STAssertNil([obj.array[1][@"two"] name], @"array[1] -> dic[two] -> name member");
-    STAssertEquals([obj.array[1][@"two"] b], [testJsonDic[@"array"][1][@"two"][@"b"] boolValue], @"array[1] -> dic[two] -> b member");
+    STAssertEquals([obj.array[1][@"two"] b], [jsonObject[@"array"][1][@"two"][@"b"] boolValue], @"array[1] -> dic[two] -> b member");
 
-    STAssertEquals(obj.i, [testJsonDic[@"i"] intValue], @"int value");
-    STAssertEquals(obj.n, testJsonDic[@"n"], @"NSNumber value");
-    STAssertEqualObjects(obj.url, [NSURL URLWithString:testJsonDic[@"url"]], @"NSURL value");
-    STAssertEquals(obj.b, [testJsonDic[@"b"] boolValue], @"bool value");
-    STAssertEqualsWithAccuracy(obj.lat, [testJsonDic[@"lat"] doubleValue], 0.01, @"double value");
-    STAssertEquals(obj.str, testJsonDic[@"str"], @"NSString");
+    STAssertEquals(obj.i, [jsonObject[@"i"] intValue], @"int value");
+    STAssertEquals(obj.n, jsonObject[@"n"], @"NSNumber value");
+    STAssertEqualObjects(obj.url, [NSURL URLWithString:jsonObject[@"url"]], @"NSURL value");
+    STAssertEquals(obj.b, [jsonObject[@"b"] boolValue], @"bool value");
+    STAssertEqualsWithAccuracy(obj.lat, [jsonObject[@"lat"] doubleValue], 0.01, @"double value");
+    STAssertEquals(obj.str, jsonObject[@"str"], @"NSString");
 }
 
 - (void)testRealJson
 {
     [JDJsonDecoder registerGlobalHandlerClass:[TestURLDecoder class] forClass:[NSURL class]];
-    TestClass *obj = [JDJsonDecoder objectForClass:[TestClass class] withData:testJsonData options:0 error:nil];
+    TestClass *obj = [JDJsonDecoder objectForClass:[TestClass class] withData:[self dataOfTest] options:0 error:nil];
 
     STAssertNotNil(obj, @"not nil");
 
@@ -150,7 +125,7 @@
 - (void)testMutable
 {
     [JDJsonDecoder registerGlobalHandlerClass:[TestURLDecoder class] forClass:[NSURL class]];
-    TestMutableClass *obj = [JDJsonDecoder objectForClass:[TestMutableClass class] withData:testJsonData options:0 error:nil];
+    TestMutableClass *obj = [JDJsonDecoder objectForClass:[TestMutableClass class] withData:[self dataOfTest] options:0 error:nil];
 
     STAssertNotNil(obj, @"not nil");
 
